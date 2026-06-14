@@ -868,7 +868,15 @@ function renderBoard() {
         renderTables();
       });
 
-      const laneEmps = lane.emps.filter(e => e.band === band);
+      const laneEmps = lane.emps
+        .filter(e => e.band === band)
+        .sort((a, b) => {
+          const gradeA = GRADE_ORDER.indexOf(a.grade);
+          const gradeB = GRADE_ORDER.indexOf(b.grade);
+          if (gradeA !== gradeB) return gradeA - gradeB;
+          if (a.gender !== b.gender) return a.gender.localeCompare(b.gender); // F before M
+          return a.name.localeCompare(b.name);
+        });
       laneEmps.forEach(emp => {
         cell.appendChild(makeCard(emp));
       });
