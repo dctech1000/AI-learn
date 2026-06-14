@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ePerformance Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #FAF7F2;
+    color: #2A2420;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  #header {
+    background: #1A1614;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  #header h1 {
+    font-family: Georgia, serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #FAF7F2;
+  }
+  #export-btn {
+    font-size: 12px;
+    color: #A67C7C;
+    background: none;
+    border: 1px solid #A67C7C;
+    padding: 5px 12px;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+  }
+  #export-btn:hover { background: #A67C7C; color: #FAF7F2; }
+
+  #main { padding: 20px 28px; }
+
+  /* ── Upload screen ── */
+  #upload-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 20px;
+  }
+  #upload-box {
+    border: 1px dashed #8C7B6E;
+    padding: 48px 64px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #upload-box:hover { background: #F0EBE3; }
+  #upload-box h2 { font-family: Georgia, serif; font-size: 18px; color: #2A2420; margin-bottom: 8px; }
+  #upload-box p { font-size: 13px; color: #8C7B6E; line-height: 1.6; }
+  #upload-box .hint { font-size: 11px; color: #A67C7C; margin-top: 12px; font-style: italic; }
+  #file-input { display: none; }
+  #upload-btn {
+    margin-top: 16px;
+    padding: 8px 24px;
+    background: #1A1614;
+    color: #FAF7F2;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+  }
+  #upload-btn:hover { background: #2A2420; }
+
+  .sample-note {
+    font-size: 12px;
+    color: #8C7B6E;
+    text-align: center;
+  }
+  .sample-note a {
+    color: #990F3D;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  /* Column mapping UI */
+  #mapping-screen { display: none; }
+  .mapping-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    max-width: 560px;
+    margin: 24px auto;
+  }
+  .mapping-row { display: contents; }
+  .mapping-label { font-size: 13px; color: #2A2420; display: flex; align-items: center; font-family: Georgia, serif; }
+  .mapping-select {
+    border: 1px solid #DDD8D0;
+    background: #FAF7F2;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: #2A2420;
+    border-radius: 0;
+    width: 100%;
+  }
+  .mapping-title {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8C7B6E;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  #confirm-mapping {
+    display: block;
+    margin: 20px auto 0;
+    padding: 8px 28px;
+    background: #1A1614;
+    color: #FAF7F2;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #confirm-mapping:hover { background: #2A2420; }
+
+  /* ── App screen ── */
+  #app-screen { display: none; }
+
+  /* Filters */
+  #filter-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #DDD8D0;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .filter-select {
+    border: 1px solid #DDD8D0;
+    background: #FAF3EC;
+    padding: 5px 10px;
+    font-size: 13px;
+    color: #2A2420;
+    border-radius: 0;
+    cursor: pointer;
+    min-width: 120px;
+  }
+  #clear-filters {
+    font-size: 13px;
+    color: #A67C7C;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px 4px;
+  }
+  #clear-filters:hover { text-decoration: underline; }
+
+  /* Board */
+  #board-wrap { overflow-x: auto; }
+  #board {
+    display: grid;
+    border-top: 1px solid #DDD8D0;
+    border-left: 1px solid #DDD8D0;
+    min-width: 700px;
+  }
+  .board-header-cell {
+    padding: 8px 12px;
+    border-right: 1px solid #DDD8D0;
+    border-bottom: 1px solid #DDD8D0;
+    background: #FAF7F2;
+  }
+  .board-header-cell .band-label {
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #2A2420;
+  }
+  .board-header-cell .band-count {
+    font-size: 11px;
+    color: #8C7B6E;
+    margin-left: 6px;
+  }
+  .row-label-cell {
+    padding: 10px 12px;
+    border-right: 1px solid #DDD8D0;
+    border-bottom: 1px solid #DDD8D0;
+    font-size: 12px;
+    color: #8C7B6E;
+    font-style: italic;
+    vertical-align: top;
+    white-space: nowrap;
+  }
+  .drop-cell {
+    padding: 8px;
+    border-right: 1px solid #DDD8D0;
+    border-bottom: 1px solid #DDD8D0;
+    min-height: 60px;
+    vertical-align: top;
+    transition: background 0.1s;
+  }
+  .drop-cell.drag-over { background: #EDE8E0; }
+
+  /* Employee card */
+  .emp-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: #F0EBE3;
+    margin-bottom: 4px;
+    cursor: grab;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .emp-card:hover { background: #EAE3D9; }
+  .emp-card:hover .drag-handle { opacity: 1; }
+  .drag-handle {
+    font-size: 11px;
+    color: #DDD8D0;
+    opacity: 0.3;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+    cursor: grab;
+  }
+  .gender-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .emp-name {
+    font-family: Georgia, serif;
+    font-size: 13px;
+    color: #2A2420;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .grade-pips {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .pip {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #8C7B6E;
+    display: inline-block;
+  }
+
+  /* Tooltip */
+  .emp-card .tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0;
+    background: #1A1614;
+    color: #FAF7F2;
+    font-size: 11px;
+    padding: 6px 10px;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    line-height: 1.6;
+  }
+  .emp-card:hover .tooltip { display: block; }
+
+  /* Summary bar */
+  #summary-bar {
+    margin-top: 16px;
+    padding: 10px 16px;
+    border: 1px solid #DDD8D0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #show-summary-toggle {
+    font-size: 12px;
+    color: #8C7B6E;
+    cursor: pointer;
+    background: none;
+    border: none;
+  }
+  #summary-stats {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+  .summary-dot { color: #DDD8D0; }
+  .stat-num { color: #990F3D; font-weight: 600; }
+  .loc-swatch { display: inline-block; width: 10px; height: 10px; }
+
+  /* Expanded summary */
+  #summary-expanded {
+    display: none;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #DDD8D0;
+    display: none;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  #summary-expanded.open { display: grid; }
+  .summary-section-title {
+    font-size: 10px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #8C7B6E;
+    margin-bottom: 6px;
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #2A2420;
+    padding: 2px 0;
+    border-bottom: 1px solid #F0EBE3;
+  }
+
+  /* ── Tables ── */
+  .analytics-section { margin-top: 28px; }
+  .table-header {
+    border-bottom: 1px solid #DDD8D0;
+    padding-bottom: 6px;
+    margin-bottom: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .table-section-label {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8C7B6E;
+    font-weight: 600;
+  }
+  .table-subtitle {
+    font-size: 11px;
+    color: #8C7B6E;
+  }
+  table.analytics {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Georgia, serif;
+  }
+  table.analytics th {
+    padding: 6px 12px;
+    text-align: center;
+    font-size: 11px;
+    color: #8C7B6E;
+    font-weight: 400;
+    border-bottom: 1px solid #DDD8D0;
+    font-family: Inter, system-ui, sans-serif;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  table.analytics th:first-child { text-align: left; }
+  table.analytics td {
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #2A2420;
+    border-bottom: 1px solid #DDD8D0;
+    text-align: center;
+  }
+  table.analytics td:first-child { text-align: left; }
+  table.analytics tr.section-row td {
+    padding: 10px 12px 4px;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8C7B6E;
+    font-weight: 600;
+    background: #FAF7F2;
+    font-family: Inter, system-ui, sans-serif;
+    border-top: 1px solid #DDD8D0;
+    border-bottom: none;
+  }
+  .table-footnote {
+    font-size: 11px;
+    color: #8C7B6E;
+    font-style: italic;
+    margin-top: 6px;
+  }
+
+  /* Gap/index color classes applied via JS */
+  .val-under { color: #A67C7C; }
+  .val-over  { color: #7A9688; }
+  .val-bold  { font-weight: 600; }
+  .val-neutral { color: #8C7B6E; }
+
+  /* Reset link */
+  #reset-link {
+    font-size: 12px;
+    color: #8C7B6E;
+    cursor: pointer;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  #reset-link:hover { color: #990F3D; }
+
+  /* Mapping screen */
+  #mapping-screen {
+    max-width: 600px;
+    margin: 40px auto;
+  }
+  #mapping-screen h2 {
+    font-family: Georgia, serif;
+    font-size: 18px;
+    margin-bottom: 6px;
+  }
+  #mapping-screen p {
+    font-size: 13px;
+    color: #8C7B6E;
+    margin-bottom: 20px;
+  }
+  #col-preview {
+    font-size: 11px;
+    color: #8C7B6E;
+    margin-top: 16px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>ePerformance Calculator</h1>
+  <div style="display:flex;gap:16px;align-items:center">
+    <button id="reset-link" onclick="resetApp()" style="display:none">↩ Load new file</button>
+    <button id="export-btn" onclick="exportCSV()" style="display:none">Export CSV</button>
+    <span style="font-size:10px;color:#6B5F58;letter-spacing:0.04em;font-family:Inter,system-ui,sans-serif" id="build-ts"></span>
+  </div>
+</div>
+<script>
+  (function() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const ts = `${pad(now.getDate())} ${months[now.getMonth()]} ${now.getFullYear()} · ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    document.getElementById('build-ts').textContent = ts;
+  })();
+</script>
+
+<div id="main">
+
+  <!-- UPLOAD SCREEN -->
+  <div id="upload-screen">
+    <div id="upload-box" onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault();this.style.background='#F0EBE3'"
+         ondragleave="this.style.background=''"
+         ondrop="handleFileDrop(event)">
+      <h2>Upload your team data</h2>
+      <p>Drop a CSV or Excel file here, or click to browse.<br>
+      Your file stays in your browser — nothing is uploaded to a server.</p>
+      <p class="hint">Required columns: Name, Grade, Gender, Location<br>
+      Optional: Current Band (P1–P4), Department, Manager</p>
+      <button id="upload-btn" onclick="event.stopPropagation();document.getElementById('file-input').click()">
+        Choose file
+      </button>
+    </div>
+    <p class="sample-note">No file yet? <a onclick="loadSampleData()">Load sample data</a> to explore the tool.</p>
+    <input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="handleFileInput(event)">
+  </div>
+
+  <!-- COLUMN MAPPING SCREEN -->
+  <div id="mapping-screen">
+    <h2>Map your columns</h2>
+    <p>We found the following columns in your file. Tell us what each one contains.</p>
+    <div class="mapping-title">YOUR COLUMN → FIELD</div>
+    <div class="mapping-grid" id="mapping-grid"></div>
+    <p id="col-preview"></p>
+    <button id="confirm-mapping" onclick="confirmMapping()">Build board →</button>
+  </div>
+
+  <!-- APP SCREEN -->
+  <div id="app-screen">
+
+    <!-- Filter bar -->
+    <div id="filter-bar">
+      <select class="filter-select" id="filter-groupby" onchange="renderBoard()">
+        <option value="overall">Overall</option>
+        <option value="grade">By Grade</option>
+        <option value="gender">By Gender</option>
+        <option value="location">By Location</option>
+      </select>
+      <select class="filter-select" id="filter-location" onchange="renderBoard()">
+        <option value="">All locations</option>
+      </select>
+      <select class="filter-select" id="filter-gender" onchange="renderBoard()">
+        <option value="">All genders</option>
+        <option value="F">Female</option>
+        <option value="M">Male</option>
+      </select>
+      <select class="filter-select" id="filter-grade" onchange="renderBoard()">
+        <option value="">All grades</option>
+      </select>
+      <button id="clear-filters" onclick="clearFilters()">Clear filters</button>
+    </div>
+
+    <!-- Board -->
+    <div id="board-wrap">
+      <div id="board"></div>
+    </div>
+
+    <!-- Summary bar -->
+    <div id="summary-bar">
+      <button id="show-summary-toggle" onclick="toggleSummary()">Show summary ▾</button>
+      <div id="summary-stats"></div>
+    </div>
+    <div id="summary-expanded"></div>
+
+    <!-- Table 1: Calibration Distribution -->
+    <div class="analytics-section">
+      <div class="table-header">
+        <span class="table-section-label">Calibration Distribution</span>
+        <span class="table-subtitle">Target: P2 70% · P3 25% · P4 5%</span>
+      </div>
+      <table class="analytics" id="table-dist">
+        <thead>
+          <tr>
+            <th>Band</th><th>Count</th><th>Actual %</th><th>Target %</th><th>Gap</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p class="table-footnote">▲ over target · ▼ under target · colored if gap &gt;5% · bold if gap &gt;15%</p>
+    </div>
+
+    <!-- Table 2: Representation Equity -->
+    <div class="analytics-section" style="margin-bottom:40px">
+      <div class="table-header">
+        <span class="table-section-label">Representation Equity</span>
+        <span class="table-subtitle">Group share of P3+P4 vs population share · 1.0 = proportional</span>
+      </div>
+      <table class="analytics" id="table-equity">
+        <thead>
+          <tr>
+            <th>Group</th><th>Total</th><th>P1</th><th>P2</th><th>P3</th><th>P4</th><th>P3+P4 share</th><th>Index</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p class="table-footnote">▲ over-represented · ▼ under-represented · = proportional (±15%) · bold if index &lt;0.70 or &gt;1.30</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let employees = [];
+let rawColumns = [];
+let rawRows = [];
+let colMap = {}; // { name, grade, gender, location, band, department, manager }
+let draggingId = null;
+let summaryOpen = false;
+
+const BANDS = ['P1','P2','P3','P4'];
+const TARGETS = { P1: null, P2: 70, P3: 25, P4: 5 };
+const GRADE_ORDER = ['GD','GE','GF','GG','GA','GB','GC','GH'];
+const LOC_HQ_KEYWORDS = ['hq','washington','dc','headquarters','head office','head quarters'];
+
+const isHQ = loc => LOC_HQ_KEYWORDS.some(k => (loc||'').toLowerCase().includes(k));
+const locBorderColor = loc => isHQ(loc) ? '#A67C7C' : '#7A9688';
+const genderColor = g => (g||'').toUpperCase().startsWith('F') ? '#C4A0A0' : '#8FA8C0';
+const gradePips = grade => {
+  const idx = GRADE_ORDER.indexOf((grade||'').toUpperCase());
+  return idx >= 0 ? idx + 1 : 2;
+};
+
+// ─── File handling ────────────────────────────────────────────────────────────
+function handleFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-box').style.background = '';
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+function handleFileInput(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      let data;
+      if (file.name.endsWith('.csv')) {
+        data = parseCSV(e.target.result);
+      } else {
+        const wb = XLSX.read(e.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      }
+      if (!data || data.length < 2) { alert('File appears empty or unreadable.'); return; }
+      rawColumns = data[0].map(c => String(c||'').trim());
+      rawRows = data.slice(1).filter(r => r.some(c => c !== null && c !== undefined && c !== ''));
+      showMappingScreen();
+    } catch(err) {
+      alert('Could not read file: ' + err.message);
+    }
+  };
+  if (file.name.endsWith('.csv')) reader.readAsText(file);
+  else reader.readAsBinaryString(file);
+}
+
+function parseCSV(text) {
+  return text.trim().split('\n').map(line => {
+    const row = []; let cur = ''; let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { row.push(cur.trim()); cur = ''; }
+      else cur += c;
+    }
+    row.push(cur.trim());
+    return row;
+  });
+}
+
+// ─── Column mapping ───────────────────────────────────────────────────────────
+const REQUIRED_FIELDS = [
+  { key: 'name',     label: 'Employee Name', required: true },
+  { key: 'grade',    label: 'Grade',         required: true },
+  { key: 'gender',   label: 'Gender (M/F)',  required: true },
+  { key: 'location', label: 'Location',      required: true },
+  { key: 'band',     label: 'Current Band (P1–P4)', required: false },
+  { key: 'department', label: 'Department',  required: false },
+  { key: 'manager',  label: 'Manager',       required: false },
+];
+
+function guessColumn(key) {
+  const hints = {
+    name: ['name','employee','staff','person','full name','full_name'],
+    grade: ['grade','level','band level','job grade'],
+    gender: ['gender','sex','m/f'],
+    location: ['location','office','city','country','site'],
+    band: ['band','perf band','performance band','p1','p2','p3','p4','rating'],
+    department: ['department','dept','team','division','function'],
+    manager: ['manager','supervisor','line manager','reporting to'],
+  };
+  const h = hints[key] || [];
+  return rawColumns.findIndex(c => h.some(k => c.toLowerCase().includes(k)));
+}
+
+function showMappingScreen() {
+  document.getElementById('upload-screen').style.display = 'none';
+  document.getElementById('mapping-screen').style.display = 'block';
+  const grid = document.getElementById('mapping-grid');
+  grid.innerHTML = '';
+  REQUIRED_FIELDS.forEach(field => {
+    const guess = guessColumn(field.key);
+    const label = document.createElement('div');
+    label.className = 'mapping-label';
+    label.textContent = field.label + (field.required ? ' *' : '');
+    const sel = document.createElement('select');
+    sel.className = 'mapping-select';
+    sel.id = 'map_' + field.key;
+    const blankOpt = document.createElement('option');
+    blankOpt.value = '';
+    blankOpt.textContent = field.required ? '— select —' : '(not in file)';
+    sel.appendChild(blankOpt);
+    rawColumns.forEach((col, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = col;
+      if (i === guess) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    grid.appendChild(label);
+    grid.appendChild(sel);
+  });
+  // Preview
+  if (rawRows[0]) {
+    document.getElementById('col-preview').textContent =
+      'First data row: ' + rawColumns.map((c,i) => `${c}="${rawRows[0][i]||''}"`).slice(0,6).join(' · ');
+  }
+}
+
+function confirmMapping() {
+  colMap = {};
+  let valid = true;
+  REQUIRED_FIELDS.forEach(f => {
+    const sel = document.getElementById('map_' + f.key);
+    const val = sel ? sel.value : '';
+    if (f.required && val === '') { alert(`Please map the "${f.label}" column.`); valid = false; return; }
+    colMap[f.key] = val === '' ? null : parseInt(val);
+  });
+  if (!valid) return;
+  buildEmployees();
+  showApp();
+}
+
+function buildEmployees() {
+  employees = rawRows.map((row, i) => ({
+    id: i,
+    name:       colMap.name     !== null ? String(row[colMap.name]     || '').trim() : `Employee ${i+1}`,
+    grade:      colMap.grade    !== null ? String(row[colMap.grade]    || '').trim().toUpperCase() : 'GE',
+    gender:     colMap.gender   !== null ? String(row[colMap.gender]   || '').trim().toUpperCase().charAt(0) : 'M',
+    location:   colMap.location !== null ? String(row[colMap.location] || '').trim() : 'HQ',
+    band:       colMap.band     !== null ? normalizeBand(String(row[colMap.band] || '').trim()) : 'P1',
+    department: colMap.department !== null ? String(row[colMap.department] || '').trim() : '',
+    manager:    colMap.manager  !== null ? String(row[colMap.manager]  || '').trim() : '',
+  })).filter(e => e.name);
+}
+
+function normalizeBand(val) {
+  if (!val) return 'P1';
+  const v = val.toUpperCase();
+  if (BANDS.includes(v)) return v;
+  // Try to extract number
+  const n = parseInt(v.replace(/\D/g,''));
+  if (n >= 1 && n <= 4) return 'P' + n;
+  return 'P1';
+}
+
+// ─── Show app ─────────────────────────────────────────────────────────────────
+function showApp() {
+  document.getElementById('mapping-screen').style.display = 'none';
+  document.getElementById('upload-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  document.getElementById('reset-link').style.display = 'inline';
+  document.getElementById('export-btn').style.display = 'inline';
+
+  // Populate filter dropdowns
+  const locations = [...new Set(employees.map(e => e.location))].sort();
+  const grades = [...new Set(employees.map(e => e.grade))].sort((a,b) => {
+    return GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b);
+  });
+
+  const locSel = document.getElementById('filter-location');
+  locSel.innerHTML = '<option value="">All locations</option>';
+  locations.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; locSel.appendChild(o); });
+
+  const gradeSel = document.getElementById('filter-grade');
+  gradeSel.innerHTML = '<option value="">All grades</option>';
+  grades.forEach(g => { const o = document.createElement('option'); o.value = g; o.textContent = g; gradeSel.appendChild(o); });
+
+  renderBoard();
+}
+
+// ─── Board rendering ──────────────────────────────────────────────────────────
+function getFiltered() {
+  const loc   = document.getElementById('filter-location')?.value || '';
+  const gender = document.getElementById('filter-gender')?.value || '';
+  const grade = document.getElementById('filter-grade')?.value || '';
+  return employees.filter(e =>
+    (!loc    || e.location === loc) &&
+    (!gender || e.gender === gender) &&
+    (!grade  || e.grade === grade)
+  );
+}
+
+function getGroupBy() {
+  return document.getElementById('filter-groupby')?.value || 'overall';
+}
+
+function renderBoard() {
+  const filtered = getFiltered();
+  const groupBy = getGroupBy();
+
+  let swimLanes;
+  if (groupBy === 'grade') {
+    const grades = [...new Set(employees.map(e => e.grade))].sort((a,b) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b));
+    swimLanes = grades.map(g => ({ key: g, label: g, emps: filtered.filter(e => e.grade === g) }));
+  } else if (groupBy === 'gender') {
+    swimLanes = [
+      { key: 'F', label: 'Female', emps: filtered.filter(e => e.gender === 'F') },
+      { key: 'M', label: 'Male',   emps: filtered.filter(e => e.gender === 'M') },
+    ];
+  } else if (groupBy === 'location') {
+    const locs = [...new Set(employees.map(e => e.location))].sort();
+    swimLanes = locs.map(l => ({ key: l, label: l, emps: filtered.filter(e => e.location === l) }));
+  } else {
+    swimLanes = [{ key: 'overall', label: 'Overall', emps: filtered }];
+  }
+
+  // Band counts for header
+  const bandCounts = BANDS.reduce((a,b) => { a[b] = filtered.filter(e => e.band === b).length; return a; }, {});
+
+  const board = document.getElementById('board');
+  const cols = BANDS.length + 1;
+  board.style.gridTemplateColumns = `120px repeat(${BANDS.length}, 1fr)`;
+  board.innerHTML = '';
+
+  // Header row
+  const cornerCell = document.createElement('div');
+  cornerCell.className = 'board-header-cell';
+  cornerCell.innerHTML = `<span style="font-size:12px;color:#8C7B6E">${groupBy === 'overall' ? 'Overall' : groupBy.charAt(0).toUpperCase()+groupBy.slice(1)}</span>`;
+  board.appendChild(cornerCell);
+
+  BANDS.forEach(b => {
+    const cell = document.createElement('div');
+    cell.className = 'board-header-cell';
+    cell.innerHTML = `<span class="band-label">${b}</span><span class="band-count">${bandCounts[b]}</span>`;
+    board.appendChild(cell);
+  });
+
+  // Swim lane rows
+  swimLanes.forEach(lane => {
+    const rowLabel = document.createElement('div');
+    rowLabel.className = 'row-label-cell';
+    rowLabel.textContent = lane.label;
+    board.appendChild(rowLabel);
+
+    BANDS.forEach(band => {
+      const cell = document.createElement('div');
+      cell.className = 'drop-cell';
+      cell.dataset.band = band;
+
+      cell.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        cell.classList.add('drag-over');
+      });
+      // Use relatedTarget to avoid flicker when hovering child elements
+      cell.addEventListener('dragleave', e => {
+        if (!cell.contains(e.relatedTarget)) {
+          cell.classList.remove('drag-over');
+        }
+      });
+      cell.addEventListener('drop', e => {
+        e.preventDefault();
+        cell.classList.remove('drag-over');
+        // Prefer dataTransfer (more reliable), fall back to module-level variable
+        const idStr = e.dataTransfer.getData('text/plain');
+        const id = idStr !== '' ? parseInt(idStr) : draggingId;
+        if (id !== null && id !== undefined && !isNaN(id)) {
+          const emp = employees.find(em => em.id === id);
+          if (emp) emp.band = band;
+        }
+        draggingId = null;
+        renderBoard();
+        renderTables();
+      });
+
+      const laneEmps = lane.emps.filter(e => e.band === band);
+      laneEmps.forEach(emp => {
+        cell.appendChild(makeCard(emp));
+      });
+
+      board.appendChild(cell);
+    });
+  });
+
+  renderSummary(filtered);
+  renderTables();
+}
+
+function makeCard(emp) {
+  const card = document.createElement('div');
+  card.className = 'emp-card';
+  card.draggable = true;
+  card.style.borderLeft = `2px solid ${locBorderColor(emp.location)}`;
+
+  card.addEventListener('dragstart', (e) => {
+    draggingId = emp.id;
+    e.dataTransfer.setData('text/plain', String(emp.id));
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  card.addEventListener('dragend', () => { draggingId = null; });
+
+  const handle = document.createElement('span');
+  handle.className = 'drag-handle';
+  handle.textContent = '⠿';
+
+  const dot = document.createElement('span');
+  dot.className = 'gender-dot';
+  dot.style.background = genderColor(emp.gender);
+
+  const name = document.createElement('span');
+  name.className = 'emp-name';
+  name.textContent = emp.name;
+
+  const pips = document.createElement('span');
+  pips.className = 'grade-pips';
+  const count = gradePips(emp.grade);
+  for (let i = 0; i < Math.min(count, 6); i++) {
+    const pip = document.createElement('span');
+    pip.className = 'pip';
+    pips.appendChild(pip);
+  }
+
+  // Tooltip — pointer-events:none so it never intercepts drag events
+  const tip = document.createElement('div');
+  tip.className = 'tooltip';
+  tip.style.pointerEvents = 'none';
+  tip.innerHTML = [
+    emp.grade ? `Grade: ${emp.grade}` : '',
+    emp.department ? `Dept: ${emp.department}` : '',
+    emp.location ? `Location: ${emp.location}` : '',
+    emp.manager ? `Manager: ${emp.manager}` : '',
+    `Gender: ${emp.gender === 'F' ? 'Female' : 'Male'}`,
+  ].filter(Boolean).join('<br>');
+
+  card.appendChild(handle);
+  card.appendChild(dot);
+  card.appendChild(name);
+  card.appendChild(pips);
+  card.appendChild(tip);
+  return card;
+}
+
+// ─── Summary bar ──────────────────────────────────────────────────────────────
+function renderSummary(filtered) {
+  const total = filtered.length;
+  const female = filtered.filter(e => e.gender === 'F').length;
+  const male   = filtered.filter(e => e.gender === 'M').length;
+  const locs   = [...new Set(filtered.map(e => e.location))];
+  const grades = [...new Set(filtered.map(e => e.grade))];
+
+  document.getElementById('summary-stats').innerHTML = `
+    <span style="display:flex;align-items:center;gap:6px">
+      <span class="loc-swatch" style="background:#A67C7C"></span><span style="color:#8C7B6E;font-size:12px">HQ</span>
+      <span class="loc-swatch" style="background:#7A9688;margin-left:6px"></span><span style="color:#8C7B6E;font-size:12px">Country Office</span>
+    </span>
+    <span class="summary-dot">·</span>
+    <span><span class="stat-num">${total}</span> <span style="color:#8C7B6E">employees</span></span>
+    <span class="summary-dot">·</span>
+    <span><span class="stat-num">${locs.length}</span> <span style="color:#8C7B6E">locations</span></span>
+    <span class="summary-dot">·</span>
+    <span><span class="stat-num">${grades.length}</span> <span style="color:#8C7B6E">grades</span></span>
+    <span class="summary-dot">·</span>
+    <span><span class="stat-num">${female}F</span> <span style="color:#8C7B6E">/</span> <span class="stat-num">${male}M</span></span>
+  `;
+
+  // Expanded summary
+  const byLoc = locs.map(l => ({ l, n: filtered.filter(e => e.location === l).length })).sort((a,b)=>b.n-a.n);
+  const byGrade = grades.sort((a,b) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b))
+    .map(g => ({ g, n: filtered.filter(e => e.grade === g).length }));
+  const byBand = BANDS.map(b => ({ b, n: filtered.filter(e => e.band === b).length }));
+
+  const exp = document.getElementById('summary-expanded');
+  exp.innerHTML = `
+    <div>
+      <div class="summary-section-title">By Location</div>
+      ${byLoc.map(x => `<div class="summary-row"><span>${x.l}</span><span>${x.n}</span></div>`).join('')}
+    </div>
+    <div>
+      <div class="summary-section-title">By Grade</div>
+      ${byGrade.map(x => `<div class="summary-row"><span>${x.g}</span><span>${x.n}</span></div>`).join('')}
+    </div>
+    <div>
+      <div class="summary-section-title">By Band</div>
+      ${byBand.map(x => `<div class="summary-row"><span>${x.b}</span><span>${x.n}</span></div>`).join('')}
+    </div>
+  `;
+}
+
+function toggleSummary() {
+  summaryOpen = !summaryOpen;
+  const exp = document.getElementById('summary-expanded');
+  const btn = document.getElementById('show-summary-toggle');
+  exp.classList.toggle('open', summaryOpen);
+  btn.textContent = summaryOpen ? 'Hide summary ▴' : 'Show summary ▾';
+}
+
+// ─── Analytics tables ─────────────────────────────────────────────────────────
+function pct(n, total) { return total === 0 ? 0 : Math.round((n / total) * 100); }
+
+function gapClass(gap, abs) {
+  if (gap === null) return '';
+  if (abs <= 5) return 'val-neutral';
+  const dir = gap < 0 ? 'val-under' : 'val-over';
+  return abs > 15 ? dir + ' val-bold' : dir;
+}
+
+function indexClass(idx) {
+  if (idx === null) return 'val-neutral';
+  if (idx >= 0.85 && idx <= 1.15) return 'val-neutral';
+  const dir = idx < 1 ? 'val-under' : 'val-over';
+  return (idx < 0.70 || idx > 1.30) ? dir + ' val-bold' : dir;
+}
+
+function renderTables() {
+  const all = employees; // tables always use all employees, not filtered
+
+  // ── Table 1: Distribution ──
+  const total = all.length;
+  const tbody1 = document.querySelector('#table-dist tbody');
+  tbody1.innerHTML = '';
+  BANDS.forEach(b => {
+    const count = all.filter(e => e.band === b).length;
+    const actual = pct(count, total);
+    const target = TARGETS[b];
+    const gap = target !== null ? actual - target : null;
+    const absGap = gap !== null ? Math.abs(gap) : 0;
+    const cls = gapClass(gap, absGap);
+    const gapStr = gap === null ? '—' : `${gap > 0 ? '▲' : '▼'} ${absGap}%`;
+
+    tbody1.innerHTML += `<tr>
+      <td>${b}</td>
+      <td>${count}</td>
+      <td>${actual}%</td>
+      <td style="color:#8C7B6E">${target !== null ? target+'%' : '—'}</td>
+      <td class="${cls}">${gapStr}</td>
+    </tr>`;
+  });
+
+  // ── Table 2: Equity ──
+  const allHighPerf = all.filter(e => e.band === 'P3' || e.band === 'P4').length;
+
+  const equityRow = (label, filterFn) => {
+    const group = all.filter(filterFn);
+    const gt = group.length;
+    const hp = group.filter(e => e.band === 'P3' || e.band === 'P4').length;
+    const groupPct = pct(gt, total);
+    const hpPct = allHighPerf === 0 ? 0 : pct(hp, allHighPerf);
+    const idx = groupPct === 0 ? null : Math.round((hpPct / groupPct) * 100) / 100;
+    const bandCols = BANDS.map(b => `<td>${group.filter(e => e.band === b).length}</td>`).join('');
+    const cls = indexClass(idx);
+    const arrow = idx === null ? '—' : idx >= 0.85 && idx <= 1.15 ? '=' : idx < 1 ? '▼' : '▲';
+    const idxStr = idx === null ? '—' : `${arrow} ${idx.toFixed(2)}`;
+    return `<tr>
+      <td>${label}</td>
+      <td>${gt}</td>
+      ${bandCols}
+      <td>${hpPct}%</td>
+      <td class="${cls}">${idxStr}</td>
+    </tr>`;
+  };
+
+  const grades = [...new Set(all.map(e => e.grade))].sort((a,b) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b));
+  const locs   = [...new Set(all.map(e => e.location))].sort();
+
+  const tbody2 = document.querySelector('#table-equity tbody');
+  tbody2.innerHTML = `
+    <tr class="section-row"><td colspan="8">Gender</td></tr>
+    ${equityRow('Female', e => e.gender === 'F')}
+    ${equityRow('Male',   e => e.gender === 'M')}
+    <tr class="section-row"><td colspan="8">Grade</td></tr>
+    ${grades.map(g => equityRow(g, e => e.grade === g)).join('')}
+    <tr class="section-row"><td colspan="8">Location</td></tr>
+    ${locs.map(l => equityRow(l, e => e.location === l)).join('')}
+  `;
+}
+
+// ─── Filters ──────────────────────────────────────────────────────────────────
+function clearFilters() {
+  document.getElementById('filter-groupby').value = 'overall';
+  document.getElementById('filter-location').value = '';
+  document.getElementById('filter-gender').value = '';
+  document.getElementById('filter-grade').value = '';
+  renderBoard();
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+function exportCSV() {
+  const headers = ['Name','Grade','Gender','Location','Department','Manager','Band'];
+  const rows = employees.map(e => [e.name, e.grade, e.gender, e.location, e.department, e.manager, e.band]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${(c||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'eperformance_export.csv';
+  a.click();
+}
+
+// ─── Reset ────────────────────────────────────────────────────────────────────
+function resetApp() {
+  employees = []; rawColumns = []; rawRows = []; colMap = {};
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('mapping-screen').style.display = 'none';
+  document.getElementById('upload-screen').style.display = 'flex';
+  document.getElementById('reset-link').style.display = 'none';
+  document.getElementById('export-btn').style.display = 'none';
+  document.getElementById('file-input').value = '';
+}
+
+// ─── Sample data ──────────────────────────────────────────────────────────────
+function loadSampleData() {
+  employees = [
+    { id:0,  name:'Jordan Lee',      grade:'GE', gender:'F', location:'HQ',             band:'P1', department:'Platform Engineering',   manager:'Alex Chen' },
+    { id:1,  name:'Maya Patel',      grade:'GF', gender:'F', location:'Country Office',  band:'P1', department:'Experience Design',       manager:'Sarah Kim' },
+    { id:2,  name:'Noah Bennett',    grade:'GE', gender:'M', location:'HQ',             band:'P2', department:'Business Intelligence',   manager:'Alex Chen' },
+    { id:3,  name:'Liam Carter',     grade:'GF', gender:'M', location:'Country Office',  band:'P2', department:'Application Development', manager:'Sarah Kim' },
+    { id:4,  name:'Sophia Martinez', grade:'GF', gender:'F', location:'HQ',             band:'P2', department:'People Operations',       manager:'Alex Chen' },
+    { id:5,  name:'Ethan Wong',      grade:'GG', gender:'M', location:'HQ',             band:'P3', department:'Application Development', manager:'Alex Chen' },
+    { id:6,  name:'Ava Thompson',    grade:'GG', gender:'F', location:'Country Office',  band:'P3', department:'Platform Engineering',   manager:'Sarah Kim' },
+    { id:7,  name:'Priya Nair',      grade:'GG', gender:'F', location:'HQ',             band:'P4', department:'Product Strategy',        manager:'Alex Chen' },
+    { id:8,  name:'Carlos Reyes',    grade:'GF', gender:'M', location:'Country Office',  band:'P1', department:'Finance',                 manager:'Sarah Kim' },
+    { id:9,  name:'Ananya Singh',    grade:'GE', gender:'F', location:'HQ',             band:'P2', department:'HR',                      manager:'Alex Chen' },
+    { id:10, name:'David Park',      grade:'GG', gender:'M', location:'Country Office',  band:'P2', department:'Engineering',             manager:'Sarah Kim' },
+    { id:11, name:'Fatima Al-Hassan',grade:'GF', gender:'F', location:'HQ',             band:'P3', department:'Legal',                   manager:'Alex Chen' },
+  ];
+
+  // Populate grade/location filters from sample
+  const locations = [...new Set(employees.map(e => e.location))].sort();
+  const grades    = [...new Set(employees.map(e => e.grade))].sort((a,b) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b));
+
+  const locSel = document.getElementById('filter-location');
+  locSel.innerHTML = '<option value="">All locations</option>';
+  locations.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; locSel.appendChild(o); });
+
+  const gradeSel = document.getElementById('filter-grade');
+  gradeSel.innerHTML = '<option value="">All grades</option>';
+  grades.forEach(g => { const o = document.createElement('option'); o.value = g; o.textContent = g; gradeSel.appendChild(o); });
+
+  showApp();
+}
+</script>
+</body>
+</html>
