@@ -496,6 +496,7 @@
         <option value="grade">By Grade</option>
         <option value="gender">By Gender</option>
         <option value="location">By Location</option>
+        <option value="manager">By Manager</option>
       </select>
       <select class="filter-select" id="filter-location" onchange="renderBoard()">
         <option value="">All locations</option>
@@ -507,6 +508,9 @@
       </select>
       <select class="filter-select" id="filter-grade" onchange="renderBoard()">
         <option value="">All grades</option>
+      </select>
+      <select class="filter-select" id="filter-manager" onchange="renderBoard()">
+        <option value="">All managers</option>
       </select>
       <button id="clear-filters" onclick="clearFilters()">Clear filters</button>
     </div>
@@ -750,18 +754,25 @@ function showApp() {
   gradeSel.innerHTML = '<option value="">All grades</option>';
   grades.forEach(g => { const o = document.createElement('option'); o.value = g; o.textContent = g; gradeSel.appendChild(o); });
 
+  const managers = [...new Set(employees.map(e => e.manager).filter(Boolean))].sort();
+  const mgrSel = document.getElementById('filter-manager');
+  mgrSel.innerHTML = '<option value="">All managers</option>';
+  managers.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m; mgrSel.appendChild(o); });
+
   renderBoard();
 }
 
 // ─── Board rendering ──────────────────────────────────────────────────────────
 function getFiltered() {
-  const loc   = document.getElementById('filter-location')?.value || '';
+  const loc    = document.getElementById('filter-location')?.value || '';
   const gender = document.getElementById('filter-gender')?.value || '';
-  const grade = document.getElementById('filter-grade')?.value || '';
+  const grade  = document.getElementById('filter-grade')?.value || '';
+  const mgr    = document.getElementById('filter-manager')?.value || '';
   return employees.filter(e =>
     (!loc    || e.location === loc) &&
     (!gender || e.gender === gender) &&
-    (!grade  || e.grade === grade)
+    (!grade  || e.grade === grade) &&
+    (!mgr    || e.manager === mgr)
   );
 }
 
@@ -785,9 +796,18 @@ function renderBoard() {
   } else if (groupBy === 'location') {
     const locs = [...new Set(employees.map(e => e.location))].sort();
     swimLanes = locs.map(l => ({ key: l, label: l, emps: filtered.filter(e => e.location === l) }));
+  } else if (groupBy === 'manager') {
+    const managers = [...new Set(employees.map(e => e.manager).filter(Boolean))].sort();
+    swimLanes = managers.map(m => ({ key: m, label: m, emps: filtered.filter(e => e.manager === m) }));
+    // Add unassigned bucket if any employees have no manager
+    const unassigned = filtered.filter(e => !e.manager);
+    if (unassigned.length) swimLanes.push({ key: '__none__', label: 'No manager', emps: unassigned });
   } else {
     swimLanes = [{ key: 'overall', label: 'Overall', emps: filtered }];
   }
+
+  // Corner label
+  const cornerLabels = { overall: 'Overall', grade: 'Grade', gender: 'Gender', location: 'Location', manager: 'Manager' };
 
   // Band counts for header
   const bandCounts = BANDS.reduce((a,b) => { a[b] = filtered.filter(e => e.band === b).length; return a; }, {});
@@ -800,7 +820,7 @@ function renderBoard() {
   // Header row
   const cornerCell = document.createElement('div');
   cornerCell.className = 'board-header-cell';
-  cornerCell.innerHTML = `<span style="font-size:12px;color:#8C7B6E">${groupBy === 'overall' ? 'Overall' : groupBy.charAt(0).toUpperCase()+groupBy.slice(1)}</span>`;
+  cornerCell.innerHTML = `<span style="font-size:12px;color:#8C7B6E">${cornerLabels[groupBy] || 'Overall'}</span>`;
   board.appendChild(cornerCell);
 
   BANDS.forEach(b => {
@@ -1055,6 +1075,7 @@ function clearFilters() {
   document.getElementById('filter-location').value = '';
   document.getElementById('filter-gender').value = '';
   document.getElementById('filter-grade').value = '';
+  document.getElementById('filter-manager').value = '';
   renderBoard();
 }
 
@@ -1109,6 +1130,11 @@ function loadSampleData() {
   const gradeSel = document.getElementById('filter-grade');
   gradeSel.innerHTML = '<option value="">All grades</option>';
   grades.forEach(g => { const o = document.createElement('option'); o.value = g; o.textContent = g; gradeSel.appendChild(o); });
+
+  const managers = [...new Set(employees.map(e => e.manager).filter(Boolean))].sort();
+  const mgrSel = document.getElementById('filter-manager');
+  mgrSel.innerHTML = '<option value="">All managers</option>';
+  managers.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m; mgrSel.appendChild(o); });
 
   showApp();
 }
